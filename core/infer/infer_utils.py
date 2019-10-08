@@ -53,19 +53,19 @@ def draw_skeleton(image, points, dataset='mpii'):
     for point in points:
         if point[0] != -1 and point[1] != -1:
             image = cv2.circle(
-                image, (point[0], point[1]), 5, pointer_color, 3)
+                image, (int(point[0]), int(point[1])), 5, pointer_color, 3)
     if dataset is 'mpii':
         LINKS = [(0, 1), (1, 2), (2, 6), (6, 3), (3, 4), (4, 5), (6, 8),
                  (8, 13), (13, 14), (14, 15), (8, 12), (12, 11), (11, 10)]
         for link in LINKS:
-            if points[link[0]] != [-1,-1] and points[link[1]] != [-1,-1]:
-                image = cv2.line(image, (points[link[0]][0],points[link[0]][1]), (points[link[1]][0],points[link[1]][1]), bbx_color)
+            if points[link[0]][:2] != [-1,-1] and points[link[1]][:2] != [-1,-1]:
+                image = cv2.line(image, (int(points[link[0]][0]),int(points[link[0]][1])), (int(points[link[1]][0]),int(points[link[1]][1])), bbx_color)
         return image
     elif dataset is 'coco':
         LINKS = [[16,14],[14,12],[17,15],[15,13],[12,13],[6,12],[7,13],[6,7],[6,8],[7,9],[8,10],[9,11],[2,3],[1,2],[1,3],[2,4],[3,5],[4,6],[5,7]]
         for link in LINKS:
-            if points[link[0]-1] != [-1,-1] and points[link[1]-1] != [-1,-1]:
-                image = cv2.line(image, (points[link[0]-1][0],points[link[0]-1][1]), (points[link[1]-1][0],points[link[1]-1][1]), bbx_color)
+            if points[link[0]-1][:2] != [-1,-1] and points[link[1]-1][:2] != [-1,-1]:
+                image = cv2.line(image, (int(points[link[0]-1][0]),int(points[link[0]-1][1])), (int(points[link[1]-1][0]),int(points[link[1]-1][1])), bbx_color)
         return image
 
 

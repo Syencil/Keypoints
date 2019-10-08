@@ -6,6 +6,7 @@ Copyright (c) 2019 luozw, Inc. All Rights Reserved
 Authors: luozhiwang(luozw1994@outlook.com)
 Date: 2019-09-16
 """
+import random
 import time
 import cv2
 import numpy as np
@@ -80,8 +81,8 @@ class Keypoints():
         sample data (infinitely)
         :return: list
         """
-        # return random.sample(self.data_set, self.batch_size)
-        return self.data_set[:self.batch_size]
+        return random.sample(self.data_set, self.batch_size)
+        # return self.data_set[:self.batch_size]
 
     def sample_batch_image_order(self):
         """
