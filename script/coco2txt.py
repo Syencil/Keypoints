@@ -28,8 +28,9 @@ def coco_keypoint2txt(file, txt_path, thre=1):
                     # key.append([-1, -1])
                 # 标注 但不可见
                 elif keypoints[i * 3 + 2] == 1:
-                    st += str(int(keypoints[i * 3])) + ',' + \
-                        str(int(keypoints[i * 3 + 1])) + ' '
+                    # st += str(int(keypoints[i * 3])) + ',' + \
+                    #     str(int(keypoints[i * 3 + 1])) + ' '
+                    st += '-1,-1' + ' '
                     # key.append([keypoints[i * 3], keypoints[i * 3 + 1]])
                 # 标注 可见
                 elif keypoints[i * 3 + 2] == 2:
@@ -40,7 +41,7 @@ def coco_keypoint2txt(file, txt_path, thre=1):
                     st += '-1,-1' + ' '
                     print('Unsupported keypoints val')
                     # key.append([-1, -1])
-            if st.count('-1,-1') <= 16:
+            if st.count('-1,-1') <= thre:
                 good_count += 1
                 # data cleaning
                 gt.append(st)
@@ -65,8 +66,8 @@ if __name__ == '__main__':
         annotation_val = os.path.join(
             annotations_dir,
             'person_keypoints_val2017.json')
-        coco_keypoint2txt(annotation_train, '../data/dataset/coco/coco_train.txt', 16)
-        coco_keypoint2txt(annotation_val, '../data/dataset/coco/coco_val.txt', 16)
+        coco_keypoint2txt(annotation_train, '../data/dataset/coco/coco_train.txt', 10)
+        coco_keypoint2txt(annotation_val, '../data/dataset/coco/coco_val.txt', 10)
 
     if dataset == 'mpii':
         mpii_dir = '../data/dataset/mpii'

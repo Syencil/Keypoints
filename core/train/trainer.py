@@ -179,7 +179,7 @@ class Trainer():
                 pred=tf.less(self.global_step, warmup_steps),
                 true_fn=lambda: self.learning_rate_warmup,
                 false_fn=lambda: tf.train.exponential_decay(
-                    self.learning_rate_init, self.global_step, self.steps_per_period, 0.96)
+                    self.learning_rate_init, self.global_step, self.steps_per_period, 0.95)
             )
         print('-Creat learning rate in %.3f' % (time.time() - start_time))
 

@@ -10,6 +10,7 @@ Date: 2019-09-27
 import tensorflow as tf
 import tensorflow.contrib.tensorrt as trt
 
+
 def tfpb2trtpb(pb_path, output_pb, output_node_name):
     # Inference with TF-TRT frozen graph workflow:
     graph = tf.Graph()
@@ -26,15 +27,20 @@ def tfpb2trtpb(pb_path, output_pb, output_node_name):
                 outputs=output_node_name,
                 max_batch_size=1,
                 max_workspace_size_bytes=2 << 20,
-                precision_mode='FLOAT32')
+                precision_mode='fp32')
 
             with tf.gfile.GFile(output_pb, "wb") as f:  # 保存模型
                 f.write(trt_graph.SerializeToString())
             # Import the TensorRT graph into a new graph and run:
             # output_node = tf.import_graph_def(
             #     trt_graph,
-            #     return_elements=[“your_outputs”])
+            #     return_elements=output_node_name)
             # sess.run(output_node)
 
+
+import os
+os.environ['CUDA_VISIBLE_DEVICES']='2'
 pb_path = '../Hourglass.pb'
+output_path = 'TensorRT.pb'
 output_node_name=['HourglassNet/keypoint_1/conv/BiasAdd']
+tfpb2trtpb(pb_path, output_path, output_node_name)

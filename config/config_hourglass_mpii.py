@@ -10,7 +10,7 @@ Date: 2019-09-11
 # HARDWARE
 CUDA_VISIBLE_DEVICES = '3'
 CUDA_VISIBLE_DEVICES_INFER = '0'
-MULTI_THREAD_NUM = None
+MULTI_THREAD_NUM = 4
 MULTI_GPU = [0]
 
 # PATH
@@ -36,38 +36,29 @@ keep_align = 0.1
 data_cleaning = True
 
 # NETWORK
-loss_mode = 'focal'# focal, sigmoid, softmax, mse
-image_size = (256, 256)
+loss_mode = 'focal'  # focal, sigmoid, softmax, mse
+image_size = (512, 512)
 stride = 4
-heatmap_size = (64, 64)
+heatmap_size = (128, 128)
 num_block = 2
 num_depth = 5
 residual_dim = [256, 384, 384, 384, 512]
-# image_size = (128, 128)
-# stride = 4
-# heatmap_size = (32, 32)
-# num_block = 1
-# num_depth = 1
-# residual_dim = [256, 256]
 
 is_maxpool = False
 is_nearest = True
 
 # TRAINING
-batch_size = 32
+batch_size = 8
 learning_rate_init = 2.5e-4
 learning_rate_warmup = 1e-4
 momentum = 0.9
 
 warmup_epoch_size = 1
-epoch_size = 70
-summary_per = 10
-save_per = 2000
+epoch_size = 60
+summary_per = 20
+save_per = 5000
 
-regularization_weight = 0.
-
-
-
+regularization_weight = 5e-4
 
 # VAL
 val_per = 200

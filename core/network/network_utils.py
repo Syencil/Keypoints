@@ -12,7 +12,7 @@ import tensorflow as tf
 import tensorflow.contrib.slim as slim
 
 
-def residual_block_v2(inputs, output_dim, stride,
+def residual_block_v2_with_bottom_neck(inputs, output_dim, stride,
                       is_training=True, scope='residual_block'):
     """
     Pre-act mode
@@ -26,7 +26,7 @@ def residual_block_v2(inputs, output_dim, stride,
     :param is_training: (bool)bn is in training phase
     :return: (Tensor) Bx(H/stride)x(W/stride)xC
     """
-    dim = output_dim / 2
+    dim = output_dim / 4
     if output_dim % 2 != 0:
         raise ValueError('residual block output dim must be a multiple of 2')
     with tf.variable_scope(scope):
@@ -100,6 +100,86 @@ def residual_block_v2(inputs, output_dim, stride,
             normalizer_fn=None,
             scope='conv3'
         )
+        tf.summary.histogram(residual.name + '/activations', residual)
+
+        output = short_cut + residual
+    return output
+
+
+def residual_block_v2(inputs, output_dim, stride,
+                      is_training=True, scope='residual_block'):
+    """
+    Pre-act mode
+    modified residual block
+    bottle neck depth = output_dim / 2
+    output = conv + short-cut
+    :param inputs: (Tensor) input tensor BxHxWxC
+    :param output_dim: (int) multiple of 2
+    :param stride: (int) if down-sample
+    :param scope: (str) scope name
+    :param is_training: (bool)bn is in training phase
+    :return: (Tensor) Bx(H/stride)x(W/stride)xC
+    """
+    with tf.variable_scope(scope):
+        depth_in = inputs.get_shape().as_list()[-1]
+        pre_act = slim.batch_norm(
+            inputs=inputs,
+            activation_fn=tf.nn.relu,
+            is_training=is_training,
+            scope='pre_act',
+            scale=True
+        )
+        if output_dim == depth_in:
+            short_cut = slim.max_pool2d(
+                inputs=inputs,
+                kernel_size=[1, 1],
+                stride=stride,
+                scope='short_cut'
+            )
+        else:
+            short_cut = slim.conv2d(
+                inputs=pre_act,
+                num_outputs=output_dim,
+                kernel_size=[1, 1],
+                stride=stride,
+                activation_fn=None,
+                normalizer_fn=None,
+                scope='short_cut'
+            )
+        tf.summary.histogram(short_cut.name + '/activations', short_cut)
+
+        residual = slim.conv2d(
+            inputs=pre_act,
+            num_outputs=output_dim,
+            kernel_size=[3, 3],
+            stride=1,
+            activation_fn=None,
+            normalizer_fn=None,
+            scope='conv1'
+        )
+        residual = slim.batch_norm(
+            residual,
+            activation_fn=tf.nn.relu,
+            is_training=is_training,
+            scope='conv1/bn',
+            scale=True)
+        tf.summary.histogram(residual.name + '/activations', residual)
+
+        residual = slim.conv2d(
+            inputs=residual,
+            num_outputs=output_dim,
+            kernel_size=[3, 3],
+            stride=stride,
+            activation_fn=None,
+            normalizer_fn=None,
+            scope='conv2'
+        )
+        residual = slim.batch_norm(
+            residual,
+            activation_fn=tf.nn.relu,
+            is_training=is_training,
+            scope='conv2/bn',
+            scale=True)
         tf.summary.histogram(residual.name + '/activations', residual)
 
         output = short_cut + residual

@@ -52,7 +52,8 @@ if __name__ == '__main__':
     import numpy as np
     from core.dataset.keypoints import Keypoints
     os.environ["CUDA_VISIBLE_DEVICES"] = "1"
-    pb_path = 'Hourglass.pb'
+    # pb_path = 'Hourglass.pb'
+    pb_path = 'tensorRT/TensorRT.pb'
     img_dir = 'data/dataset/coco/images/val2017'
     gt_path = 'data/dataset/coco/coco_val.txt'
     batch_size = 8
