@@ -200,7 +200,7 @@ class Keypoints():
         img = cv2.resize(img, self.image_size)
         # img, point = image_augment_with_keypoints(img, point)
         hm = self.generate_hm(point, self.heatmap_size)
-        img, hm =self._augment(img,hm)
+        # img, hm =self._augment(img,hm)
         return img, hm
 
     def iterator(self, max_worker=None, is_oneshot=False):

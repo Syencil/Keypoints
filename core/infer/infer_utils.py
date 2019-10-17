@@ -29,7 +29,7 @@ def get_results(hms, threshold=0.6):
             tmp = [index[1], index[0]]
             score = hm[index[0], index[1], c]
             tmp.append(score)
-            if score >= threshold:
+            if score > threshold:
                 joints[c] = np.array(tmp)
         results.append(joints.tolist())
     return results

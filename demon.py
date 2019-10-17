@@ -52,13 +52,13 @@ if __name__ == '__main__':
     import numpy as np
     from core.dataset.keypoints import Keypoints
     os.environ["CUDA_VISIBLE_DEVICES"] = "1"
-    # pb_path = 'Hourglass.pb'
-    pb_path = 'tensorRT/TensorRT.pb'
+    pb_path = 'Hourglass.pb'
+    # pb_path = 'tensorRT/TensorRT.pb'
     img_dir = 'data/dataset/coco/images/val2017'
     gt_path = 'data/dataset/coco/coco_val.txt'
     batch_size = 8
-    img_size = (256,256)
-    hm_size = (64,64)
+    img_size = (512,512)
+    hm_size = (128,128)
     dataset = Keypoints(img_dir, gt_path, batch_size, img_size, hm_size)
     it = dataset.iterator(4, False)
     image, hm = next(it)
@@ -68,27 +68,27 @@ if __name__ == '__main__':
     outputs = read_pb(pb_path, input_dict, output_node_name)
     for k in range(len(outputs)):
         # outputs[k] = sigmoid(outputs[k])
-        points = get_results(outputs[k], 0.4)
-        gt_points = get_results(hm, 0.4)
+        points = get_results(outputs[k], 0.3)
+        gt_points = get_results(hm, 0.6)
         print(points)
         print(gt_points)
         for i in range(len(points)):
             img = image[i][:, :, ::-1]
             for j in range(len(points[i])):
                 if points[i][j][0] != -1:
-                    points[i][j][0] = int(points[i][j][0]/64*img.shape[1])
+                    points[i][j][0] = int(points[i][j][0]/hm_size[1]*img.shape[1])
                 if points[i][j][1] != -1:
-                    points[i][j][1] = int(points[i][j][1]/64*img.shape[0])
+                    points[i][j][1] = int(points[i][j][1]/hm_size[0]*img.shape[0])
             for j in range(len(gt_points[i])):
                     if gt_points[i][j][0] != -1:
-                        gt_points[i][j][0] = int(gt_points[i][j][0]/64*img.shape[1])
+                        gt_points[i][j][0] = int(gt_points[i][j][0]/hm_size[1]*img.shape[1])
                     if gt_points[i][j][1] != -1:
-                        gt_points[i][j][1] = int(gt_points[i][j][1]/64*img.shape[0])
+                        gt_points[i][j][1] = int(gt_points[i][j][1]/hm_size[0]*img.shape[0])
 
 
             one_ouput = np.sum(outputs[k][i], axis=-1, keepdims=True) * 255
             tile_output = np.tile(one_ouput, (1, 1, 3))
-            tile_img =cv2.resize(tile_output, (256, 256)) + img
+            tile_img =cv2.resize(tile_output, img_size) + img
 
             cv2.imwrite('render_img/'+str(i)+'_'+str(k)+'_visible.jpg', tile_img)
 

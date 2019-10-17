@@ -8,7 +8,7 @@ Date: 2019-09-11
 """
 
 # HARDWARE
-CUDA_VISIBLE_DEVICES = '3'
+CUDA_VISIBLE_DEVICES = '2'
 CUDA_VISIBLE_DEVICES_INFER = '0'
 MULTI_THREAD_NUM = 4
 MULTI_GPU = [0]
@@ -25,7 +25,7 @@ ckpt_dir = 'checkpoints/coco'
 
 # SAVER AND LOADER
 max_keep = 30
-pre_trained_ckpt = None
+pre_trained_ckpt = 'checkpoints/sample/Hourglass_coco.ckpt-250000'
 ckpt_name = 'Hourglass_coco.ckpt'
 
 # AUGMENT
@@ -40,7 +40,7 @@ loss_mode = 'focal' # focal, sigmoid, softmax, mse
 image_size = (512, 512)
 stride = 4
 heatmap_size = (128, 128)
-num_block = 4
+num_block = 2
 num_depth = 5
 residual_dim = [256, 384, 384, 384, 512]
 
@@ -48,14 +48,14 @@ is_maxpool = False
 is_nearest = True
 
 # TRAINING
-batch_size = 16
+batch_size = 8
 learning_rate_init = 2.5e-4
 learning_rate_warmup = 1e-4
-momentum = 0.9
+momentum = 0.99
 
 warmup_epoch_size = 1
-epoch_size = 60
-summary_per = 10
+epoch_size = 40
+summary_per = 20
 save_per = 5000
 
 regularization_weight = 5e-4
