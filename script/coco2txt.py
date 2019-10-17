@@ -28,9 +28,9 @@ def coco_keypoint2txt(file, txt_path, thre=1):
                     # key.append([-1, -1])
                 # 标注 但不可见
                 elif keypoints[i * 3 + 2] == 1:
-                    # st += str(int(keypoints[i * 3])) + ',' + \
-                    #     str(int(keypoints[i * 3 + 1])) + ' '
-                    st += '-1,-1' + ' '
+                    st += str(int(keypoints[i * 3])) + ',' + \
+                        str(int(keypoints[i * 3 + 1])) + ' '
+                    # st += '-1,-1' + ' '
                     # key.append([keypoints[i * 3], keypoints[i * 3 + 1]])
                 # 标注 可见
                 elif keypoints[i * 3 + 2] == 2:
