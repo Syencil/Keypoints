@@ -6,7 +6,13 @@
 # Quick Start
 1.python3 train_hourglass_coco.py <br>
 2.python3 core/infer/freeze_graph.py -CUDA 0 -c checkpoints/coco/Hourglass_coco.ckpt -o Hourglass.pb <br>
-3.python3 demon.py
+3.python3 demon.py<br>
+
+# Checkpoints
+https://drive.google.com/file/d/1EZ6ywA52b-C6dABQDHLMZTqpO-2HOH1s/view?usp=sharing <br>
+All ckpts are trained on coco and mpii using scripts within the project.
+However, every ckpt is not fully trained due to limited resources. 
+But it's enough to train your own data set as a pre-training model.<br>
 
 # Attention
 1.输出层之前不可以加BN，BN会强制将输出分布转换为0-1正态分布，破坏输出<br>
