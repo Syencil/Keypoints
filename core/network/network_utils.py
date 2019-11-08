@@ -174,12 +174,7 @@ def residual_block_v2(inputs, output_dim, stride,
             normalizer_fn=None,
             scope='conv2'
         )
-        residual = slim.batch_norm(
-            residual,
-            activation_fn=tf.nn.relu,
-            is_training=is_training,
-            scope='conv2/bn',
-            scale=True)
+
         tf.summary.histogram(residual.name + '/activations', residual)
 
         output = short_cut + residual

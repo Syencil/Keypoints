@@ -130,7 +130,16 @@ class Trainer():
                                            'inputs_x')
             self.inputs_y = tf.placeholder(tf.float32, [None, self.heatmap_size[0], self.heatmap_size[0],
                                                         self.train_dataset.num_class], 'inputs_y')
-            self.is_training = tf.placeholder(tf.bool, name='is_training')
+            # 如果使用placeholder为BN层的trainable参数,BN层中会处于一种使用tf.cond,tf.switch流控制节点(此处可以在tensorRT以及模型图中得到验证)
+            # 这样的话每一个BN层都会有两条路径出来，训练太占显存，infer部署的时候还要单独进行剪枝
+            # 此处直接设置为True的话，训练是没问题的。做val的时候，不调用train_op那么BN的gamma和beta不会更新
+            # 并且由于mean和var设置为依赖于train_op更新，所以BN在val时所有参数都没有更新，相当于trainable=False
+            # 然而在tf1.x版本中，trainable=False是让BN处于freeze状态。
+            # 和infer不同的时，freeze仍然是使用当前batch的mean和var进行处理。
+            # 在tf2.x版本中，bn已经改成了当trainable为False的时候是infer状态
+            # 所以此版本的Val仍然不是很准确，所以我将bn层的var和mean打印出来，最后以小学习率甚至0学习率进行更新var和mean
+            # 依次弥补造成的问题。因为当这个"伪val"的loss和acc达到预期之后我们唯一需要等待的就是让模型中的BN层的var和mean震荡起来，warmup
+            self.is_training = True
 
     def init_dataset(self):
         start_time = time.time()
@@ -308,7 +317,7 @@ class Trainer():
             feed_dict = {
                 self.inputs_x: imgs,
                 self.inputs_y: hms,
-                self.is_training: True}
+                }
 
             if step % self.summary_per == 0:
                 if self.is_debug:
@@ -343,7 +352,7 @@ class Trainer():
                     feed_dict = {
                         self.inputs_x: imgs_v,
                         self.inputs_y: hms_v,
-                        self.is_training: False}
+                        }
                     loss, features = self.sess.run([self.model_loss, self.features], feed_dict=feed_dict)
                     losses.append(loss)
                 print('Validation %d times in %.3fs mean loss is %f'

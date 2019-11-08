@@ -10,9 +10,8 @@ import random
 import time
 import cv2
 import numpy as np
-from skimage import transform,exposure
 import os
-from core.dataset.data_augment import image_augment_with_keypoints
+
 
 class Keypoints():
     def __init__(self, image_dir, gt_path, batch_size,

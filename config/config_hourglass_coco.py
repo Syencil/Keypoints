@@ -8,15 +8,15 @@ Date: 2019-09-11
 """
 
 # HARDWARE
-CUDA_VISIBLE_DEVICES = '2'
-CUDA_VISIBLE_DEVICES_INFER = '0'
+CUDA_VISIBLE_DEVICES = '3'
+CUDA_VISIBLE_DEVICES_INFER = '3'
 MULTI_THREAD_NUM = 4
 MULTI_GPU = [0]
 
 # PATH
-dataset_dir = 'data/dataset/coco'
-train_image_dir = 'data/dataset/coco/images/train2017'
-val_image_dir = 'data/dataset/coco/images/val2017'
+dataset_dir = '/data/dataset/coco'
+train_image_dir = '/data/dataset/coco/images/train2017'
+val_image_dir = '/data/dataset/coco/images/val2017'
 train_list_path = 'data/dataset/coco/coco_train.txt'
 val_list_path = 'data/dataset/coco/coco_val.txt'
 
@@ -25,7 +25,7 @@ ckpt_dir = 'checkpoints/coco'
 
 # SAVER AND LOADER
 max_keep = 30
-pre_trained_ckpt = 'checkpoints/sample/Hourglass_coco.ckpt-250000'
+pre_trained_ckpt = None
 ckpt_name = 'Hourglass_coco.ckpt'
 
 # AUGMENT
@@ -48,7 +48,7 @@ is_maxpool = False
 is_nearest = True
 
 # TRAINING
-batch_size = 8
+batch_size = 16
 learning_rate_init = 2.5e-4
 learning_rate_warmup = 1e-4
 momentum = 0.99

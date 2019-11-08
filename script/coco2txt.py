@@ -58,7 +58,7 @@ if __name__ == '__main__':
     dataset = 'coco'
 
     if dataset == 'coco':
-        coco_dir = '../data/dataset/coco'
+        coco_dir = '/data/dataset/coco'
         annotations_dir = os.path.join(coco_dir, 'annotations')
         annotation_train = os.path.join(
             annotations_dir,
@@ -70,7 +70,7 @@ if __name__ == '__main__':
         coco_keypoint2txt(annotation_val, '../data/dataset/coco/coco_val.txt', 10)
 
     if dataset == 'mpii':
-        mpii_dir = '../data/dataset/mpii'
+        mpii_dir = '/data/dataset/mpii'
         annotations_dir = os.path.join(mpii_dir, 'annotations')
         annotation_train = os.path.join(
             annotations_dir,
