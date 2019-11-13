@@ -6,36 +6,77 @@ Copyright (c) 2019 luozw, Inc. All Rights Reserved
 Authors: luozhiwang(luozw1994@outlook.com)
 Date: 2019-09-24
 """
+
 import argparse
 import tensorflow as tf
 from tensorflow.python.framework import graph_util
 # from tensorflow.contrib.tensorrt import trt_convert as trt
 import os
+import sys
+
+sys.path.append('.')
 
 
 def parse_arg():
     parse = argparse.ArgumentParser()
-    parse.add_argument('--CUDA', dest='CUDA', default=None, help='CUDA_VISIBLE_DEVICE')
-    parse.add_argument('-c', '--ckpt', dest='ckpt', default=None, help='Freeze ckpt path')
-    parse.add_argument('-o', '--output', dest='output_graph', default=None, help='Output graph path')
+    parse.add_argument(
+        '-C',
+        '--CUDA',
+        dest='CUDA',
+        default=None,
+        help='CUDA_VISIBLE_DEVICE')
+    parse.add_argument(
+        '-c',
+        '--ckpt',
+        dest='ckpt',
+        default=None,
+        help='Freeze ckpt path')
+    parse.add_argument(
+        '-o',
+        '--output',
+        dest='output_graph',
+        default=None,
+        help='Output graph path')
+    parse.add_argument(
+        '-t',
+        '--is_training',
+        dest='output_graph',
+        default=False,
+        help='Output graph path')
     return parse.parse_args()
 
 
-def freeze_graph(input_checkpoint, output_graph, trt_acceleration=False):
+def freeze_graph(input_checkpoint, output_graph, is_training=False):
     '''
     :param input_checkpoint:
     :param output_graph: PB模型保存路径
+    :param is_training: Is BN using moving-mean and moving-var
     :return:
     '''
     # checkpoint = tf.train.get_checkpoint_state(model_folder) #检查目录下ckpt文件状态是否可用
     # input_checkpoint = checkpoint.model_checkpoint_path #得ckpt文件路径
 
+    if is_training:
+        saver = tf.train.import_meta_graph(
+            input_checkpoint + '.meta', clear_devices=True)
+    else:
+        from core.network.hourglass import Hourglass
+        import config.config_hourglass_coco as config
+        model = Hourglass(tf.placeholder(name="Placeholder/inputs_x", dtype=tf.float32, shape=[None, 512, 512, 3]),
+                          17,
+                          num_block=config.num_block,
+                          num_depth=config.num_depth,
+                          residual_dim=config.residual_dim,
+                          is_training=False,
+                          is_maxpool=config.is_maxpool,
+                          is_nearest=config.is_nearest
+                          )
+        saver = tf.train.Saver(var_list=tf.global_variables())
+
     # 指定输出的节点名称,该节点名称必须是原模型中存在的节点
     print('Freeze graph')
     output_node_names = ["HourglassNet/keypoint_1/conv/Sigmoid"]
     print(output_node_names)
-    saver = tf.train.import_meta_graph(
-        input_checkpoint + '.meta', clear_devices=True)
 
     with tf.Session() as sess:
         # sess.run(tf.global_variables_initializer())
