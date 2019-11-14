@@ -68,7 +68,7 @@ if __name__ == '__main__':
     outputs = read_pb(pb_path, input_dict, output_node_name)
     for k in range(len(outputs)):
         # outputs[k] = sigmoid(outputs[k])
-        points = get_results(outputs[k], 0.3)
+        points = get_results(outputs[k], 0.2)
         gt_points = get_results(hm, 0.6)
         print(points)
         print(gt_points)
