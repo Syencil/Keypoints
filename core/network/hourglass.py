@@ -19,7 +19,8 @@ class Hourglass():
                  residual_dim=(256, 256, 384, 384, 384, 512),
                  is_training=True,
                  is_maxpool=False,
-                 is_nearest=True
+                 is_nearest=True,
+                 reuse=False
                  ):
         """
         Modified hourglass. See more in network_utils.py
@@ -31,6 +32,7 @@ class Hourglass():
         :param is_training: (bool) is in training parse
         :param is_maxpool: (bool) if true, using max-pool down-sampling. Otherwise, residual block stride will be 2
         :param is_nearest: (bool) if true, using nearest up-sampling. Otherwise, using deconvolution
+        :param reuse:(bool) reuse the variable
         """
         self.inputs = inputs
         self.num_class = num_class
@@ -40,6 +42,7 @@ class Hourglass():
         self.is_training = is_training
         self.is_maxpool = is_maxpool
         self.is_nearest = is_nearest
+        self.reuse = reuse
 
         self.features = self.graph_hourglass(self.inputs)
 
@@ -58,6 +61,7 @@ class Hourglass():
                 stride=2,
                 activation_fn=None,
                 normalizer_fn=None,
+                reuse=self.reuse,
                 scope='conv1'
             )
             tf.summary.histogram(net.name + '/activations', net)
@@ -67,94 +71,10 @@ class Hourglass():
                 output_dim=256,
                 stride=2,
                 is_training=self.is_training,
+                reuse=self.reuse,
                 scope='residual_1'
             )
         return net
-
-    def inter_process_hourglass(
-            self, inputs_1, inputs_2, scope='inter_process_hourglass'):
-        """
-        Abandoned！！！
-
-        process after hourglass block.
-        inputs_2 -> bn/relu -> conv -> branch1 conv ----------------->
-                                    -> branch2 conv -> inter-> conv -> output
-        inputs_1 ---------------------------------------------------->
-        Attention! we utilize resnet_v2 pre-act mode, which is different between the paper.
-        :param inputs_1: (Tensor) BxHxWxC input of hourglass block
-        :param inputs_2: (Tensor) BxHxWxC output of hourglass block
-        :param scope: (str) scope
-        :return: List(Tensor), (Tensor) BxHxWxC inter features for training, final features for Keypoints
-        """
-        with tf.variable_scope(scope):
-            # pre-act
-            inputs_2 = slim.batch_norm(
-                inputs=inputs_2,
-                activation_fn=tf.nn.relu,
-                scope='pre_bn_act',
-                scale=True
-            )
-            tf.summary.histogram(inputs_2.name + '/activations', inputs_2)
-
-            # common
-            common = slim.conv2d(
-                inputs=inputs_2,
-                num_outputs=256,
-                kernel_size=[1, 1],
-                stride=1,
-                activation_fn=None,
-                normalizer_fn=None,
-                scope='inter_common_conv'
-            )
-            common = slim.batch_norm(
-                inputs=common,
-                activation_fn=tf.nn.relu,
-                is_training=self.is_training,
-                scope='inter_common_conv/bn',
-                scale=True)
-            tf.summary.histogram(common.name + '/activations', common)
-
-            # branch 1
-            branch_1 = slim.conv2d(
-                inputs=common,
-                num_outputs=256,
-                kernel_size=[1, 1],
-                stride=1,
-                activation_fn=None,
-                normalizer_fn=None,
-                scope='inter_conv1'
-            )
-            tf.summary.histogram(branch_1.name + '/activations', branch_1)
-
-            # branch 2
-            inter_feature = slim.conv2d(
-                inputs=common,
-                num_outputs=self.num_class,
-                kernel_size=[1, 1],
-                stride=1,
-                activation_fn=None,
-                normalizer_fn=None,
-                scope='inter_conv2'
-            )
-            tf.summary.histogram(
-                inter_feature.name +
-                '/activations',
-                inter_feature)
-
-            branch_2 = slim.conv2d(
-                inputs=inter_feature,
-                num_outputs=256,
-                kernel_size=[1, 1],
-                stride=1,
-                activation_fn=None,
-                normalizer_fn=None,
-                scope='inter_conv4'
-            )
-            tf.summary.histogram(branch_2.name + '/activations', branch_2)
-
-            output = branch_1 + branch_2 + inputs_1
-
-        return inter_feature, output
 
     def inter_process(self, inputs_1, inputs_2, scope='inter_process'):
         with tf.variable_scope(scope):
@@ -163,7 +83,9 @@ class Hourglass():
                 activation_fn=tf.nn.relu,
                 is_training=self.is_training,
                 scope='branch_1/bn',
-                scale=True)
+                reuse=self.reuse,
+                scale=True
+            )
             tf.summary.histogram(branch_1.name + '/activations', branch_1)
 
             branch_1 = slim.conv2d(
@@ -173,6 +95,7 @@ class Hourglass():
                 stride=1,
                 activation_fn=None,
                 normalizer_fn=None,
+                reuse=self.reuse,
                 scope='branch_1/conv'
             )
             tf.summary.histogram(branch_1.name + '/activations', branch_1)
@@ -182,6 +105,7 @@ class Hourglass():
                 activation_fn=tf.nn.relu,
                 is_training=self.is_training,
                 scope='branch_2/bn',
+                reuse=self.reuse,
                 scale=True)
             tf.summary.histogram(branch_2.name + '/activations', branch_2)
 
@@ -192,6 +116,7 @@ class Hourglass():
                 stride=1,
                 activation_fn=None,
                 normalizer_fn=None,
+                reuse=self.reuse,
                 scope='branch_2/conv'
             )
             tf.summary.histogram(branch_2.name + '/activations', branch_2)
@@ -206,6 +131,7 @@ class Hourglass():
                 activation_fn=tf.nn.relu,
                 is_training=self.is_training,
                 scope='bn',
+                reuse=self.reuse,
                 scale=True
             )
             tf.summary.histogram(pre.name + '/activations', pre)
@@ -217,6 +143,7 @@ class Hourglass():
                 stride=1,
                 activation_fn=None,
                 normalizer_fn=None,
+                reuse=self.reuse,
                 scope='conv'
             )
             tf.summary.histogram(outputs.name + '/activations', outputs)
@@ -238,6 +165,7 @@ class Hourglass():
                                           activation_fn=tf.nn.relu,
                                           is_training=self.is_training,
                                           scope='pre_bn',
+                                          reuse=self.reuse,
                                           scale=True)
                 tf.summary.histogram(feature.name + '/activations', feature)
                 feature = slim.conv2d(
@@ -247,6 +175,7 @@ class Hourglass():
                     stride=1,
                     activation_fn=tf.nn.sigmoid,
                     normalizer_fn=None,
+                    reuse=self.reuse,
                     scope='conv'
                 )
                 tf.summary.histogram(feature.name + '/activations', feature)
@@ -278,6 +207,7 @@ class Hourglass():
                     is_training=self.is_training,
                     is_maxpool=self.is_maxpool,
                     is_nearest=self.is_nearest,
+                    reuse=self.reuse,
                     scope='hourglass_%d' % i
                 )
                 hinge = self.hinge(hourglass, self.residual_dim[0], 'hinge_%d' % i)

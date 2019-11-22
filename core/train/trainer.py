@@ -94,10 +94,14 @@ class Trainer():
         self.model = None
         self.features = None
 
+        self.val_model = None
+        self.val_features = None
+
         # LOSS
         self.loss_mode = cfg.loss_mode
         self.model_losses = None
         self.model_loss = None
+        self.val_model_loss = None
         self.trainable_variables = None
         self.regularization_loss = None
         self.loss = None
@@ -137,8 +141,6 @@ class Trainer():
             # 然而在tf1.x版本中，trainable=False是让BN处于freeze状态。
             # 和infer不同的时，freeze仍然是使用当前batch的mean和var进行处理。
             # 在tf2.x版本中，bn已经改成了当trainable为False的时候是infer状态
-            # 所以此版本的Val仍然不是很准确，所以我将bn层的var和mean打印出来，最后以小学习率甚至0学习率进行更新var和mean
-            # 依次弥补造成的问题。因为当这个"伪val"的loss和acc达到预期之后我们唯一需要等待的就是让模型中的BN层的var和mean震荡起来，warmup
             self.is_training = True
 
     def init_dataset(self):
@@ -167,15 +169,29 @@ class Trainer():
         print('-Creat dataset in %.3f' % (time.time() - start_time))
 
     def init_model(self):
+        print("-Creat Train model")
         self.model = self.model_class(self.inputs_x, self.train_dataset.num_class,
                                       num_block=self.num_block,
                                       num_depth=self.num_depth,
                                       residual_dim=self.residual_dim,
-                                      is_training=self.is_training,
+                                      is_training=True,
                                       is_maxpool=self.is_maxpool,
-                                      is_nearest=self.is_nearest
+                                      is_nearest=self.is_nearest,
+                                      reuse=False
                                       )
-        self.features = self.model.features[0]
+        self.features = self.model.features
+
+        print("-Creat Val model")
+        self.val_model = self.model_class(self.inputs_x, self.train_dataset.num_class,
+                                          num_block=self.num_block,
+                                          num_depth=self.num_depth,
+                                          residual_dim=self.residual_dim,
+                                          is_training=False,
+                                          is_maxpool=self.is_maxpool,
+                                          is_nearest=self.is_nearest,
+                                          reuse=True
+                                          )
+        self.val_features = self.val_model.features
 
     def init_learning_rate(self):
         start_time = time.time()
@@ -186,7 +202,8 @@ class Trainer():
                                        dtype=tf.int64, name='warmup_steps')
             self.learning_rate = tf.cond(
                 pred=tf.less(self.global_step, warmup_steps),
-                true_fn=lambda: self.learning_rate_warmup,
+                true_fn=lambda: self.learning_rate_warmup + (self.learning_rate_init - self.learning_rate_warmup)
+                                * tf.cast(self.global_step, tf.float32) / tf.cast(warmup_steps, tf.float32),
                 false_fn=lambda: tf.train.exponential_decay(
                     self.learning_rate_init, self.global_step, self.steps_per_period, 0.95)
             )
@@ -210,6 +227,7 @@ class Trainer():
                 raise ValueError('Unsupported loss mode: %s' % self.loss_mode)
             self.model_losses = loss_fn(self.features, self.inputs_y)
             self.model_loss = tf.add_n(self.model_losses)
+            self.val_model_loss = loss_fn(self.val_features, self.inputs_y)
             self.regularization_loss = tf.add_n(
                 [tf.nn.l2_loss(var) for var in self.trainable_variables])
             self.regularization_loss = self.regularization_weight * self.regularization_loss
@@ -353,7 +371,7 @@ class Trainer():
                         self.inputs_x: imgs_v,
                         self.inputs_y: hms_v,
                         }
-                    loss, features = self.sess.run([self.model_loss, self.features], feed_dict=feed_dict)
+                    loss, features = self.sess.run([self.val_model_loss, self.features], feed_dict=feed_dict)
                     losses.append(loss)
                 print('Validation %d times in %.3fs mean loss is %f'
                       % (self.val_time, time.time() - start_time, sum(losses) / len(losses)))

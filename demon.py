@@ -10,7 +10,7 @@ import os
 import cv2
 import time
 import tensorflow as tf
-from core.infer.infer_utils import get_results, draw_point, draw_skeleton
+from core.infer.visual_utils import get_results, draw_point, draw_skeleton
 
 
 def read_pb(pb_path, input_node_name_and_val, output_node_name):
@@ -84,7 +84,6 @@ if __name__ == '__main__':
                         gt_points[i][j][0] = int(gt_points[i][j][0]/hm_size[1]*img.shape[1])
                     if gt_points[i][j][1] != -1:
                         gt_points[i][j][1] = int(gt_points[i][j][1]/hm_size[0]*img.shape[0])
-
 
             one_ouput = np.sum(outputs[k][i], axis=-1, keepdims=True) * 255
             tile_output = np.tile(one_ouput, (1, 1, 3))

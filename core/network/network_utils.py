@@ -13,7 +13,7 @@ import tensorflow.contrib.slim as slim
 
 
 def residual_block_v2_with_bottom_neck(inputs, output_dim, stride,
-                      is_training=True, scope='residual_block'):
+                                       is_training=True, reuse=False, scope='residual_block'):
     """
     Pre-act mode
     modified residual block
@@ -22,6 +22,7 @@ def residual_block_v2_with_bottom_neck(inputs, output_dim, stride,
     :param inputs: (Tensor) input tensor BxHxWxC
     :param output_dim: (int) multiple of 2
     :param stride: (int) if down-sample
+    :param reuse: (bool) reuse the variable
     :param scope: (str) scope name
     :param is_training: (bool)bn is in training phase
     :return: (Tensor) Bx(H/stride)x(W/stride)xC
@@ -36,7 +37,8 @@ def residual_block_v2_with_bottom_neck(inputs, output_dim, stride,
             activation_fn=tf.nn.relu,
             is_training=is_training,
             scope='pre_act',
-            scale=True
+            scale=True,
+            reuse=reuse
         )
         if output_dim == depth_in:
             short_cut = slim.max_pool2d(
@@ -53,7 +55,8 @@ def residual_block_v2_with_bottom_neck(inputs, output_dim, stride,
                 stride=stride,
                 activation_fn=None,
                 normalizer_fn=None,
-                scope='short_cut'
+                scope='short_cut',
+                reuse=reuse
             )
         tf.summary.histogram(short_cut.name + '/activations', short_cut)
 
@@ -64,14 +67,17 @@ def residual_block_v2_with_bottom_neck(inputs, output_dim, stride,
             stride=1,
             activation_fn=None,
             normalizer_fn=None,
-            scope='conv1'
+            scope='conv1',
+            reuse=reuse
         )
         residual = slim.batch_norm(
             residual,
             activation_fn=tf.nn.relu,
             is_training=is_training,
             scope='conv1/bn',
-            scale=True)
+            scale=True,
+            reuse=reuse
+        )
         tf.summary.histogram(residual.name + '/activations', residual)
 
         residual = slim.conv2d(
@@ -81,14 +87,17 @@ def residual_block_v2_with_bottom_neck(inputs, output_dim, stride,
             stride=stride,
             activation_fn=None,
             normalizer_fn=None,
-            scope='conv2'
+            scope='conv2',
+            reuse=reuse
         )
         residual = slim.batch_norm(
             residual,
             activation_fn=tf.nn.relu,
             is_training=is_training,
             scope='conv2/bn',
-            scale=True)
+            scale=True,
+            reuse=reuse
+        )
         tf.summary.histogram(residual.name + '/activations', residual)
 
         residual = slim.conv2d(
@@ -98,7 +107,8 @@ def residual_block_v2_with_bottom_neck(inputs, output_dim, stride,
             stride=1,
             activation_fn=None,
             normalizer_fn=None,
-            scope='conv3'
+            scope='conv3',
+            reuse=reuse
         )
         tf.summary.histogram(residual.name + '/activations', residual)
 
@@ -107,7 +117,7 @@ def residual_block_v2_with_bottom_neck(inputs, output_dim, stride,
 
 
 def residual_block_v2(inputs, output_dim, stride,
-                      is_training=True, scope='residual_block'):
+                      is_training=True, reuse=False, scope='residual_block'):
     """
     Pre-act mode
     modified residual block
@@ -127,7 +137,8 @@ def residual_block_v2(inputs, output_dim, stride,
             activation_fn=tf.nn.relu,
             is_training=is_training,
             scope='pre_act',
-            scale=True
+            scale=True,
+            reuse=reuse
         )
         if output_dim == depth_in:
             short_cut = slim.max_pool2d(
@@ -144,7 +155,8 @@ def residual_block_v2(inputs, output_dim, stride,
                 stride=stride,
                 activation_fn=None,
                 normalizer_fn=None,
-                scope='short_cut'
+                scope='short_cut',
+                reuse=reuse
             )
         tf.summary.histogram(short_cut.name + '/activations', short_cut)
 
@@ -155,14 +167,17 @@ def residual_block_v2(inputs, output_dim, stride,
             stride=1,
             activation_fn=None,
             normalizer_fn=None,
-            scope='conv1'
+            scope='conv1',
+            reuse=reuse
         )
         residual = slim.batch_norm(
             residual,
             activation_fn=tf.nn.relu,
             is_training=is_training,
             scope='conv1/bn',
-            scale=True)
+            scale=True,
+            reuse=reuse
+        )
         tf.summary.histogram(residual.name + '/activations', residual)
 
         residual = slim.conv2d(
@@ -172,7 +187,8 @@ def residual_block_v2(inputs, output_dim, stride,
             stride=stride,
             activation_fn=None,
             normalizer_fn=None,
-            scope='conv2'
+            scope='conv2',
+            reuse=reuse
         )
 
         tf.summary.histogram(residual.name + '/activations', residual)
@@ -183,7 +199,7 @@ def residual_block_v2(inputs, output_dim, stride,
 
 def hourglass_block(inputs, num_depth, residual_dim,
                     is_training=True, is_maxpool=False,
-                    is_nearest=True, scope='hourglass_block'):
+                    is_nearest=True, reuse=False, scope='hourglass_block'):
     """
     modified hourglass block fellow by "CornerNet"
     There 2 residual blocks in short-cut istead of 1
@@ -209,6 +225,7 @@ def hourglass_block(inputs, num_depth, residual_dim,
             output_dim=cur_res_dim,
             stride=1,
             is_training=is_training,
+            reuse=reuse,
             scope='up_1'
         )
         if is_maxpool:
@@ -223,6 +240,7 @@ def hourglass_block(inputs, num_depth, residual_dim,
                 output_dim=next_res_dim,
                 stride=1,
                 is_training=is_training,
+                reuse=reuse,
                 scope='low_1'
             )
         else:
@@ -231,6 +249,7 @@ def hourglass_block(inputs, num_depth, residual_dim,
                 output_dim=next_res_dim,
                 stride=2,
                 is_training=is_training,
+                reuse=reuse,
                 scope='low_1'
             )
 
@@ -242,6 +261,7 @@ def hourglass_block(inputs, num_depth, residual_dim,
                 is_training=is_training,
                 is_maxpool=is_maxpool,
                 is_nearest=is_nearest,
+                reuse=reuse,
                 scope='hourglass_block_%d' % (num_depth - 1)
             )
         else:
@@ -250,6 +270,7 @@ def hourglass_block(inputs, num_depth, residual_dim,
                 output_dim=next_res_dim,
                 stride=1,
                 is_training=is_training,
+                reuse=reuse,
                 scope='low_2'
             )
         low_3 = residual_block_v2(
@@ -257,6 +278,7 @@ def hourglass_block(inputs, num_depth, residual_dim,
             output_dim=cur_res_dim,
             stride=1,
             is_training=is_training,
+            reuse=reuse,
             scope='low_3'
         )
         if is_nearest:
@@ -271,8 +293,8 @@ def hourglass_block(inputs, num_depth, residual_dim,
                 num_outputs=cur_res_dim,
                 kernel_size=[3, 3],
                 stride=2,
+                reuse=reuse,
                 scope='up_2'
             )
         merge = up_1 + up_2
     return merge
-

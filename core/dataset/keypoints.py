@@ -256,7 +256,7 @@ class Keypoints():
 
 if __name__ == '__main__':
 
-    from core.infer.infer_utils import visiual_image_with_hm
+    from core.infer.visual_utils import visiual_image_with_hm
 
     dataset_dir = '../../data/dataset/coco'
     image_dir = '../../data/dataset/coco/images/val2017'
