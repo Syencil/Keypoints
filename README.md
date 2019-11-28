@@ -1,5 +1,5 @@
 # Keypoint Detection In Tensorflow and TensorRT
-## 1.Modified hourglass (Hourglass-101) <br>
+## 1.Modified hourglass (Hourglass-71) <br>
 ### Quick Start
 * python3 train_hourglass_coco.py <br>
 * python3 core/infer/freeze_graph.py -CUDA 0 -c checkpoints/coco/Hourglass_coco.ckpt -o Hourglass.pb <br>
