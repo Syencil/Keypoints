@@ -13,7 +13,7 @@ import numpy as np
 import os
 
 
-class Keypoints():
+class Dataset():
     def __init__(self, image_dir, gt_path, batch_size,
                  image_size=(512, 512), heatmap_size=(128, 128)):
         """
@@ -66,25 +66,6 @@ class Keypoints():
         print('-Set has been created in %.3fs' % (time.time() - t0))
         return image_set
 
-    def transform_image_set_abs_to_rel(self, ratio=0.05):
-        for data in self.data_set:
-            name, bbx, points = data
-            w = bbx[2] - bbx[0]
-            h = bbx[3] - bbx[1]
-            # keep 5% blank for edge
-            bbx[0] = int(bbx[0] - w * ratio)
-            bbx[1] = int(bbx[1] - h * ratio)
-            bbx[2] = int(bbx[2] + w * ratio)
-            bbx[3] = int(bbx[3] + h * ratio)
-            w = bbx[2] - bbx[0]
-            h = bbx[3] - bbx[1]
-
-            ratio_w = self.heatmap_size[1] / w
-            ratio_h = self.heatmap_size[0] / h
-            for i in range(len(points)):
-                if points[i] != [-1,-1]:
-                    points[i][0] = int((points[i][0] - bbx[0]) * ratio_w)
-                    points[i][1] = int((points[i][1] - bbx[1]) * ratio_h)
 
     def sample_batch_image_random(self):
         """
@@ -130,7 +111,7 @@ class Keypoints():
                 hm[:, :, i] = self.make_guassian(heatmap_h_w[0], heatmap_h_w[1], sigma=s, center=[joints[i][0], joints[i][1]])
         return hm
 
-    def _crop_image_with_pad_and_resize(self, image, bbx, points, ratio=0.2):
+    def _crop_image_with_pad_and_resize(self, image, bbx, points, ratio=0.05):
         image_h, image_w = image.shape[0:2]
         crop_bbx = np.copy(bbx)
         crop_points = np.copy(points)
@@ -138,10 +119,10 @@ class Keypoints():
         w = bbx[2] - bbx[0] + 1
         h = bbx[3] - bbx[1] + 1
         # keep 5% blank for edge
-        crop_bbx[0] = round(bbx[0] - w * ratio)
-        crop_bbx[1] = round(bbx[1] - h * ratio)
-        crop_bbx[2] = round(bbx[2] + w * ratio)
-        crop_bbx[3] = round(bbx[3] + h * ratio)
+        crop_bbx[0] = int(bbx[0] - w * ratio)
+        crop_bbx[1] = int(bbx[1] - h * ratio)
+        crop_bbx[2] = int(bbx[2] + w * ratio)
+        crop_bbx[3] = int(bbx[3] + h * ratio)
         # clip value from 0 to len-1
         crop_bbx[0] = 0 if crop_bbx[0] < 0 else crop_bbx[0]
         crop_bbx[1] = 0 if crop_bbx[1] < 0 else crop_bbx[1]
@@ -153,30 +134,47 @@ class Keypoints():
         w = crop_bbx[2] - crop_bbx[0] + 1
         h = crop_bbx[3] - crop_bbx[1] + 1
         # keep aspect ratio
-        max_len = max(w, h)
-        ratio_w = self.heatmap_size[1] / max_len
-        ratio_h = self.heatmap_size[0] / max_len
-        # padding
-        if self.ratio > h /w:
-            pad = int(w * self.ratio - h)
-            pad_t = pad //2
-            pad_d = pad - pad_t
-            pad_image = np.pad(crop_image,((pad_t, pad_d), (0 ,0), (0,0)))
-            for i in range(len(points)):
-                if points[i][0] != -1 and points[i][1] != -1:
-                    crop_points[i][0] = round((points[i][0] - crop_bbx[0]) * ratio_w)
-                    crop_points[i][1] = round((points[i][1] - crop_bbx[1] + pad_t) * ratio_h)
-        else:
-            pad = int(h / self.ratio - w)
-            pad_l = pad // 2
-            pad_r = pad - pad_l
-            pad_image = np.pad(crop_image, ((0, 0), (pad_l, pad_r), (0, 0)))
-            for i in range(len(points)):
-                if points[i][0] != -1 and points[i][1] != -1:
-                    crop_points[i][0] = round((points[i][0] - crop_bbx[0] + pad_l) * ratio_w)
-                    crop_points[i][1] = round((points[i][1] - crop_bbx[1]) * ratio_h)
 
-        return pad_image, crop_points
+        ih, iw = self.image_size
+
+        scale = min(iw / w, ih / h)
+        nw, nh = int(scale * w), int(scale * h)
+        image_resized = cv2.resize(crop_image, (nw, nh))
+
+        image_paded = np.full(shape=[ih, iw, 3], fill_value=127.5)
+        dw, dh = (iw - nw) // 2, (ih - nh) // 2
+        image_paded[dh:nh + dh, dw:nw + dw, :] = image_resized
+        for i in range(len(points)):
+            if points[i][0] != -1 and points[i][1] != -1:
+                crop_points[i][0] = int(((points[i][0] - crop_bbx[0]) * scale + dw) / self.stride )
+                crop_points[i][1] = int(((points[i][1] - crop_bbx[1]) * scale + dh) / self.stride )
+
+        return image_paded, crop_points
+
+        # max_len = max(w, h)
+        # ratio_w = self.heatmap_size[1] / max_len
+        # ratio_h = self.heatmap_size[0] / max_len
+        # # padding
+        # if self.ratio > h /w:
+        #     pad = int(w * self.ratio - h)
+        #     pad_t = pad //2
+        #     pad_d = pad - pad_t
+        #     pad_image = np.pad(crop_image,((pad_t, pad_d), (0 ,0), (0,0)))
+        #     for i in range(len(points)):
+        #         if points[i][0] != -1 and points[i][1] != -1:
+        #             crop_points[i][0] = round((points[i][0] - crop_bbx[0]) * ratio_w)
+        #             crop_points[i][1] = round((points[i][1] - crop_bbx[1] + pad_t) * ratio_h)
+        # else:
+        #     pad = int(h / self.ratio - w)
+        #     pad_l = pad // 2
+        #     pad_r = pad - pad_l
+        #     pad_image = np.pad(crop_image, ((0, 0), (pad_l, pad_r), (0, 0)))
+        #     for i in range(len(points)):
+        #         if points[i][0] != -1 and points[i][1] != -1:
+        #             crop_points[i][0] = round((points[i][0] - crop_bbx[0] + pad_l) * ratio_w)
+        #             crop_points[i][1] = round((points[i][1] - crop_bbx[1]) * ratio_h)
+        #
+        # return pad_image, crop_points
 
     def _augment(self, image, hm):
         # flip
@@ -196,7 +194,7 @@ class Keypoints():
         img = cv2.imread(image_path)
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         img, point = self._crop_image_with_pad_and_resize(img, bbx, point)
-        img = cv2.resize(img, self.image_size)
+        # img = cv2.resize(img, self.image_size)
         # img, point = image_augment_with_keypoints(img, point)
         hm = self.generate_hm(point, self.heatmap_size)
         # img, hm =self._augment(img,hm)
@@ -258,15 +256,15 @@ if __name__ == '__main__':
 
     from core.infer.visual_utils import visiual_image_with_hm
 
-    dataset_dir = '../../data/dataset/coco'
-    image_dir = '../../data/dataset/coco/images/val2017'
+    dataset_dir = '/data/dataset/coco'
+    image_dir = '/data/dataset/coco/images/val2017'
     gt_path = '../../data/dataset/coco/coco_val.txt'
     render_path = '../../render_img'
 
     ite = 2
     batch_size = 32
 
-    coco = Keypoints(image_dir, gt_path, batch_size)
+    coco = Dataset(image_dir, gt_path, batch_size)
     it = coco.iterator(4)
 
     t0 = time.time()

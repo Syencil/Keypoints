@@ -96,46 +96,6 @@ def focal_loss(features, heatmap, alpha=2, beta=4):
         losses.append(loss)
     return losses
 
-# def focal_loss(preds, gt):
-#     eps = 1e-9
-#     print(gt.get_shape().as_list())
-#     zeros = tf.zeros_like(gt)
-#     ones = tf.ones_like(gt)
-#     num_pos = tf.reduce_sum(tf.where(tf.equal(gt, 1), ones, zeros))
-#     loss = []
-#     # loss=tf.reduce_mean(tf.log(preds))
-#     for pre in preds:
-#         pre = tf.nn.sigmoid(pre)
-#         pos_weight = tf.where(tf.equal(gt, 1), ones - pre, zeros)
-#         neg_weight = tf.where(tf.less(gt, 1), pre, zeros)
-#         pos_loss = tf.reduce_sum(
-#             tf.log(
-#                 pre +
-#                 eps) *
-#             tf.pow(
-#                 pos_weight +
-#                 eps,
-#                 2))
-#         neg_loss = tf.reduce_sum(
-#             tf.pow(
-#                 (1 -
-#                  gt +
-#                  eps),
-#                 4) *
-#             tf.pow(
-#                 neg_weight +
-#                 eps,
-#                 2) *
-#             tf.log(
-#                 (1 -
-#                  pre +
-#                  eps)))
-#         if num_pos == 0:
-#             loss.append(-neg_loss)
-#         else:
-#             loss.append(-(pos_loss + neg_loss) / (num_pos + eps))
-#     return loss
-
 
 def mean_square_loss(features, heatmap):
     print('-Utilize Mse-Loss')

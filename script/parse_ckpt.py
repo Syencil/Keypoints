@@ -13,6 +13,9 @@ from tensorflow.python import pywrap_tensorflow
 import numpy as np
 
 # Read data from checkpoint file
+# 检查模型变量的var和mean
+
+
 def parse_ckpt(checkpoint_path):
     reader =pywrap_tensorflow.NewCheckpointReader(checkpoint_path)
     var_to_shape_map = reader.get_variable_to_shape_map()

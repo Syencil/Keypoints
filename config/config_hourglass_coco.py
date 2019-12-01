@@ -8,8 +8,8 @@ Date: 2019-09-11
 """
 
 # HARDWARE
-CUDA_VISIBLE_DEVICES = '3'
-CUDA_VISIBLE_DEVICES_INFER = '3'
+CUDA_VISIBLE_DEVICES = '2'
+CUDA_VISIBLE_DEVICES_INFER = '1'
 MULTI_THREAD_NUM = 4
 MULTI_GPU = [0]
 
@@ -21,12 +21,7 @@ train_list_path = 'data/dataset/coco/coco_train.txt'
 val_list_path = 'data/dataset/coco/coco_val.txt'
 
 log_dir = 'output/coco'
-ckpt_dir = 'checkpoints/coco'
-
-# SAVER AND LOADER
-max_keep = 30
-pre_trained_ckpt = None
-ckpt_name = 'Hourglass_coco.ckpt'
+ckpt_dir = '/data/checkpoints/coco'
 
 # AUGMENT
 rotate = [0.5, 30, 30]
@@ -36,27 +31,33 @@ keep_align = 0.1
 data_cleaning = True
 
 # NETWORK
+backbone = "hourglass"
 loss_mode = 'focal' # focal, sigmoid, softmax, mse
 image_size = (512, 512)
 stride = 4
 heatmap_size = (128, 128)
-num_block = 2
+num_block = 1
 num_depth = 5
 residual_dim = [256, 384, 384, 384, 512]
 
 is_maxpool = False
 is_nearest = True
 
+# SAVER AND LOADER
+max_keep = 30
+pre_trained_ckpt = None
+ckpt_name = backbone + "_coco" + '.ckpt'
+
 # TRAINING
 batch_size = 16
-learning_rate_init = 2.5e-4
-learning_rate_warmup = 1e-4
-momentum = 0.99
+learning_rate_init = 1e-3
+learning_rate_warmup = 2.5e-4
+exp_decay = 0.97
 
-warmup_epoch_size = 1
+warmup_epoch_size = 0
 epoch_size = 40
 summary_per = 20
-save_per = 5000
+save_per = 2500
 
 regularization_weight = 5e-4
 
@@ -64,7 +65,7 @@ regularization_weight = 5e-4
 
 
 # VAL
-val_per = 200
+val_per = 2500
 val_time = 20
 val_rate = 0.1
 

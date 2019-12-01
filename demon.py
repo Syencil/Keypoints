@@ -50,7 +50,7 @@ def read_pb(pb_path, input_node_name_and_val, output_node_name):
 
 if __name__ == '__main__':
     import numpy as np
-    from core.dataset.keypoints import Keypoints
+    from core.dataset.data_generator import Dataset
     os.environ["CUDA_VISIBLE_DEVICES"] = "1"
     pb_path = 'Hourglass.pb'
     # pb_path = 'tensorRT/TensorRT.pb'
@@ -59,7 +59,7 @@ if __name__ == '__main__':
     batch_size = 8
     img_size = (512,512)
     hm_size = (128,128)
-    dataset = Keypoints(img_dir, gt_path, batch_size, img_size, hm_size)
+    dataset = Dataset(img_dir, gt_path, batch_size, img_size, hm_size)
     it = dataset.iterator(4, False)
     image, hm = next(it)
     image_norm = (image / 127.5) - 1

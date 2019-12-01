@@ -60,9 +60,9 @@ def freeze_graph(input_checkpoint, output_graph, is_training=False):
         saver = tf.train.import_meta_graph(
             input_checkpoint + '.meta', clear_devices=True)
     else:
-        from core.network.hourglass import Hourglass
+        from core.network.keypoints import Keypoints
         import config.config_hourglass_coco as config
-        model = Hourglass(tf.placeholder(name="Placeholder/inputs_x", dtype=tf.float32, shape=[None, 512, 512, 3]),
+        model = Keypoints(tf.placeholder(name="Placeholder/inputs_x", dtype=tf.float32, shape=[None, 512, 512, 3]),
                           17,
                           num_block=config.num_block,
                           num_depth=config.num_depth,

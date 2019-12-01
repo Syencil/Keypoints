@@ -27,6 +27,7 @@ class Trainer():
         # self.NUM_GPU = len(self.MULTI_GPU)
 
         # NETWORK
+        self.backbone = cfg.backbone
         self.image_size = cfg.image_size
         self.heatmap_size = cfg.heatmap_size
         self.stride = cfg.stride
@@ -40,7 +41,7 @@ class Trainer():
         self.batch_size = cfg.batch_size
         self.learning_rate_init = cfg.learning_rate_init
         self.learning_rate_warmup = cfg.learning_rate_warmup
-        self.momentum = cfg.momentum
+        self.exp_decay = cfg.exp_decay
 
         self.warmup_epoch_size = cfg.warmup_epoch_size
         self.epoch_size = cfg.epoch_size
@@ -171,6 +172,7 @@ class Trainer():
     def init_model(self):
         print("-Creat Train model")
         self.model = self.model_class(self.inputs_x, self.train_dataset.num_class,
+                                      backbone=self.backbone,
                                       num_block=self.num_block,
                                       num_depth=self.num_depth,
                                       residual_dim=self.residual_dim,
@@ -179,10 +181,11 @@ class Trainer():
                                       is_nearest=self.is_nearest,
                                       reuse=False
                                       )
-        self.features = self.model.features
+        self.features = self.model.features[0]
 
         print("-Creat Val model")
         self.val_model = self.model_class(self.inputs_x, self.train_dataset.num_class,
+                                          backbone=self.backbone,
                                           num_block=self.num_block,
                                           num_depth=self.num_depth,
                                           residual_dim=self.residual_dim,
@@ -191,7 +194,7 @@ class Trainer():
                                           is_nearest=self.is_nearest,
                                           reuse=True
                                           )
-        self.val_features = self.val_model.features
+        self.val_features = self.val_model.features[0]
 
     def init_learning_rate(self):
         start_time = time.time()
@@ -205,7 +208,7 @@ class Trainer():
                 true_fn=lambda: self.learning_rate_warmup + (self.learning_rate_init - self.learning_rate_warmup)
                                 * tf.cast(self.global_step, tf.float32) / tf.cast(warmup_steps, tf.float32),
                 false_fn=lambda: tf.train.exponential_decay(
-                    self.learning_rate_init, self.global_step, self.steps_per_period, 0.95)
+                    self.learning_rate_init, self.global_step, self.steps_per_period, self.exp_decay, staircase=True)
             )
         print('-Creat learning rate in %.3f' % (time.time() - start_time))
 
@@ -227,7 +230,7 @@ class Trainer():
                 raise ValueError('Unsupported loss mode: %s' % self.loss_mode)
             self.model_losses = loss_fn(self.features, self.inputs_y)
             self.model_loss = tf.add_n(self.model_losses)
-            self.val_model_loss = loss_fn(self.val_features, self.inputs_y)
+            self.val_model_loss = loss_fn(self.val_features, self.inputs_y)[-1]
             self.regularization_loss = tf.add_n(
                 [tf.nn.l2_loss(var) for var in self.trainable_variables])
             self.regularization_loss = self.regularization_weight * self.regularization_loss
@@ -278,11 +281,11 @@ class Trainer():
             tf.summary.scalar("model_loss", self.model_loss)
             tf.summary.scalar("regularization_loss", self.regularization_loss)
             tf.summary.scalar("total_loss", self.loss)
-            # Optional
-            tf.summary.scalar('keypoint_bn_moving_mean',
-                              tf.reduce_mean(slim.get_variables_by_name('HourglassNet/keypoint_1/pre_bn/moving_mean')))
-            tf.summary.scalar('keypoint_bn_moving_var', tf.reduce_mean(
-                slim.get_variables_by_name('HourglassNet/keypoint_1/pre_bn/moving_variance')))
+            # # Optional
+            # tf.summary.scalar('keypoint_bn_moving_mean',
+            #                   tf.reduce_mean(slim.get_variables_by_name('HourglassNet/keypoint_1/pre_bn/moving_mean')))
+            # tf.summary.scalar('keypoint_bn_moving_var', tf.reduce_mean(
+            #     slim.get_variables_by_name('HourglassNet/keypoint_1/pre_bn/moving_variance')))
 
             if not os.path.exists(self.log_dir):
                 os.mkdir(self.log_dir)
@@ -371,7 +374,7 @@ class Trainer():
                         self.inputs_x: imgs_v,
                         self.inputs_y: hms_v,
                         }
-                    loss, features = self.sess.run([self.val_model_loss, self.features], feed_dict=feed_dict)
+                    loss = self.sess.run(self.val_model_loss, feed_dict=feed_dict)
                     losses.append(loss)
                 print('Validation %d times in %.3fs mean loss is %f'
                       % (self.val_time, time.time() - start_time, sum(losses) / len(losses)))

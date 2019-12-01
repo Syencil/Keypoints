@@ -7,8 +7,8 @@ Authors: luozhiwang(luozw1994@outlook.com)
 Date: 2019-09-26
 """
 from core.train.trainer import Trainer
-from core.network.hourglass import Hourglass
-from core.dataset.keypoints import Keypoints
+from core.network.keypoints import Keypoints
+from core.dataset.data_generator import Dataset
 import config.config_hourglass_mpii as cfg
 
 import sys
@@ -35,5 +35,5 @@ class TrainHourglass(Trainer):
         self.train()
 
 if __name__ == '__main__':
-    trainer = TrainHourglass(Hourglass, Keypoints, cfg)
+    trainer = TrainHourglass(Keypoints, Dataset, cfg)
     trainer.train_launch()

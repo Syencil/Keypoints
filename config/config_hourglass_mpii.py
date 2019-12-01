@@ -23,10 +23,6 @@ val_list_path = 'data/dataset/mpii/mpii_train.txt'
 log_dir = 'output/mpii'
 ckpt_dir = 'checkpoints/mpii'
 
-# SAVER AND LOADER
-max_keep = 30
-pre_trained_ckpt = None
-ckpt_name = 'Hourglass_mpii.ckpt'
 
 # AUGMENT
 rotate = [0.5, 30, 30]
@@ -36,6 +32,7 @@ keep_align = 0.1
 data_cleaning = True
 
 # NETWORK
+backbone = "hourglass"
 loss_mode = 'focal'  # focal, sigmoid, softmax, mse
 image_size = (512, 512)
 stride = 4
@@ -46,6 +43,11 @@ residual_dim = [256, 384, 384, 384, 512]
 
 is_maxpool = False
 is_nearest = True
+
+# SAVER AND LOADER
+max_keep = 30
+pre_trained_ckpt = None
+ckpt_name = backbone + "_voc" + ".ckpt"
 
 # TRAINING
 batch_size = 8

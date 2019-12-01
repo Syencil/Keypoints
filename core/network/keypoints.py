@@ -9,11 +9,13 @@ Date: 2019-09-10
 import time
 import tensorflow as tf
 import tensorflow.contrib.slim as slim
+from tensorflow.contrib.slim.nets import resnet_v2
 from core.network.network_utils import residual_block_v2, hourglass_block
 
 
-class Hourglass():
+class Keypoints():
     def __init__(self, inputs, num_class,
+                 backbone="hourglass",
                  num_block=2,
                  num_depth=5,
                  residual_dim=(256, 256, 384, 384, 384, 512),
@@ -36,6 +38,8 @@ class Hourglass():
         """
         self.inputs = inputs
         self.num_class = num_class
+        self.backbone = backbone
+
         self.num_block = num_block
         self.num_depth = num_depth
         self.residual_dim = residual_dim
@@ -183,7 +187,7 @@ class Hourglass():
 
         return keypoint_feature
 
-    def graph_backbone(self, inputs):
+    def graph_backbone_hourglass(self, inputs):
         """
         Extract features
         :param inputs: (Tensor) BxHxWxC images
@@ -220,7 +224,35 @@ class Hourglass():
         print('-Model has been created in %.3fs' % (time.time() - t0))
         return features
 
-    def graph_hourglass(self, inputs, scope='HourglassNet'):
+    def graph_backbone_resnet_101(self, inputs):
+        with tf.variable_scope('backbone'):
+            feature, end_point = resnet_v2.resnet_v2_101(inputs, num_classes=None, global_pool=False, is_training=self.is_training, reuse=self.reuse, scope="resnet_v2_101")
+            with tf.variable_scope('up_sample'):
+                feature = slim.conv2d_transpose(feature, 512, 3, 2, activation_fn=None, reuse=self.reuse, scope="transpose_conv1")
+                feature = slim.batch_norm(inputs=feature,
+                                          activation_fn=tf.nn.relu,
+                                          is_training=self.is_training,
+                                          scope='transpose_conv1/bn',
+                                          reuse=self.reuse,
+                                          scale=True)
+                feature = slim.conv2d_transpose(feature, 512, 3, 2, activation_fn=None, reuse=self.reuse, scope="transpose_conv2")
+                feature = slim.batch_norm(inputs=feature,
+                                          activation_fn=tf.nn.relu,
+                                          is_training=self.is_training,
+                                          scope='transpose_conv2/bn',
+                                          reuse=self.reuse,
+                                          scale=True)
+                feature = slim.conv2d_transpose(feature, 512, 3, 2, activation_fn=None, reuse=self.reuse, scope="transpose_conv3")
+                feature = slim.batch_norm(inputs=feature,
+                                          activation_fn=tf.nn.relu,
+                                          is_training=self.is_training,
+                                          scope='transpose_conv3/bn',
+                                          reuse=self.reuse,
+                                          scale=True)
+                feature = slim.conv2d(feature, self.residual_dim[0], 3, 1, activation_fn=None, normalizer_fn=None, reuse=self.reuse, scope="conv1")
+        return [feature]
+
+    def graph_hourglass(self, inputs, scope='Keypoints'):
         """
         graph hourglass net.
         :param inputs: (Tensor) images
@@ -228,9 +260,13 @@ class Hourglass():
         :return: [[Tensor B x H/4 x W/4 x num_class,...]]
         """
         with tf.variable_scope(scope):
-            with slim.arg_scope([slim.conv2d], weights_initializer=tf.initializers.variance_scaling(scale=1, mode='fan_avg')):
-                features = self.graph_backbone(inputs)
-                all_features = [self.keypoint(features)]
+            if self.backbone == "hourglass":
+                features = self.graph_backbone_hourglass(inputs)
+            elif self.backbone == "resnet_v2_101":
+                features = self.graph_backbone_resnet_101(inputs)
+            else:
+                raise ValueError("Invalid Backbone type!")
+            all_features = [self.keypoint(features)]
         print('--PB file input node is %s' % inputs.name)
         print('--PB file output node is %s' % all_features[0][-1].name)
         return all_features

@@ -13,6 +13,7 @@ from core.infer.visual_utils import draw_point, draw_bbx, draw_skeleton
 # sess, input_tensor, output_tensor = \
 #     read_pb(pb_path, ['Placeholder/inputs_x:0'], ['HourglassNet/keypoint_1/conv/Sigmoid:0'])
 # # 2.处理图片 每次处理一个图里面的数据作为batch
+# #   bbxes 是提前知道的信息 bbxes = [[xmin, ymin, xmax, ymax], [xmin, ymin, xmax, ymax]]
 # points = pred_one_image(image, bbxes, sess, input_tensor, output_tensor)
 # print(points)
 # for point in points:
