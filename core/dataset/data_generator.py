@@ -11,6 +11,7 @@ import time
 import cv2
 import numpy as np
 import os
+import copy
 
 
 class Dataset():
@@ -37,7 +38,7 @@ class Dataset():
 
         self.num_data = len(self.data_set)
         self.num_class = len(self.data_set[0][2])
-        self.stride = self.image_size[0]//self.heatmap_size[0]
+        self.stride = self.image_size[0] // self.heatmap_size[0]
         self.ratio = self.image_size[0] / self.image_size[1]
 
         self._pre = -self.batch_size
@@ -61,11 +62,12 @@ class Dataset():
             points = line.split()[2:]
             tmp = []
             for point in points:
-                tmp.append([round(float(x)) for x in point.split(',')])
-            image_set.append((line.split()[0], np.array([round(float(x)) for x in b],dtype=np.int32), np.array(tmp,dtype=np.int32)))
+                tmp.append([[round(float(x)) for x in y.split(",")]
+                            for y in point.split('|')])
+            image_set.append(
+                (line.split()[0], [round(float(x)) for x in b], tmp))
         print('-Set has been created in %.3fs' % (time.time() - t0))
         return image_set
-
 
     def sample_batch_image_random(self):
         """
@@ -97,24 +99,28 @@ class Dataset():
         else:
             x0 = center[0]
             y0 = center[1]
-        return np.exp(-4. * np.log(2.) * ((x - x0) ** 2 + (y - y0) ** 2) / sigma ** 2)
+        return np.exp(-4. * np.log(2.) * ((x - x0) **
+                                          2 + (y - y0) ** 2) / sigma ** 2)
 
-    def generate_hm(self,joints, heatmap_h_w):
+    def generate_hm(self, joints, heatmap_h_w):
         num_joints = len(joints)
         hm = np.zeros([heatmap_h_w[0], heatmap_h_w[1],
                        num_joints], dtype=np.float32)
         for i in range(num_joints):
-            if joints[i][0] != -1 and joints[i][1] != -1:
-                s = int(
-                    np.sqrt(
-                        heatmap_h_w[0]) * heatmap_h_w[1] * 10 / 4096) + 2
-                hm[:, :, i] = self.make_guassian(heatmap_h_w[0], heatmap_h_w[1], sigma=s, center=[joints[i][0], joints[i][1]])
+            for joint in joints[i]:
+                if joint[0] != -1 and joint[1] != -1:
+                    s = int(
+                        np.sqrt(
+                            heatmap_h_w[0]) * heatmap_h_w[1] * 10 / 4096) + 2
+                    gen_hm = self.make_guassian(heatmap_h_w[0], heatmap_h_w[1], sigma=s,
+                                                center=[joint[0], joint[1]])
+                    hm[:, :, i] = np.maximum(hm[:, :, i], gen_hm)
         return hm
 
     def _crop_image_with_pad_and_resize(self, image, bbx, points, ratio=0.05):
         image_h, image_w = image.shape[0:2]
-        crop_bbx = np.copy(bbx)
-        crop_points = np.copy(points)
+        crop_bbx = copy.deepcopy(bbx)
+        crop_points = copy.deepcopy(points)
 
         w = bbx[2] - bbx[0] + 1
         h = bbx[3] - bbx[1] + 1
@@ -129,7 +135,8 @@ class Dataset():
         crop_bbx[2] = image_w - 1 if crop_bbx[2] > image_w - 1 else crop_bbx[2]
         crop_bbx[3] = image_h - 1 if crop_bbx[3] > image_h - 1 else crop_bbx[3]
         # crop the image
-        crop_image = image[crop_bbx[1]: crop_bbx[3] + 1, crop_bbx[0]: crop_bbx[2] + 1, :]
+        crop_image = image[crop_bbx[1]: crop_bbx[3] +
+                           1, crop_bbx[0]: crop_bbx[2] + 1, :]
         # update width and height
         w = crop_bbx[2] - crop_bbx[0] + 1
         h = crop_bbx[3] - crop_bbx[1] + 1
@@ -145,42 +152,47 @@ class Dataset():
         dw, dh = (iw - nw) // 2, (ih - nh) // 2
         image_paded[dh:nh + dh, dw:nw + dw, :] = image_resized
         for i in range(len(points)):
-            if points[i][0] != -1 and points[i][1] != -1:
-                crop_points[i][0] = int(((points[i][0] - crop_bbx[0]) * scale + dw) / self.stride )
-                crop_points[i][1] = int(((points[i][1] - crop_bbx[1]) * scale + dh) / self.stride )
+            for j, point in enumerate(points[i]):
+                if point[0] != -1 and point[1] != -1:
+                    crop_points[i][j][0] = int(
+                        ((point[0] - crop_bbx[0]) * scale + dw) / self.stride)
+                    crop_points[i][j][1] = int(
+                        ((point[1] - crop_bbx[1]) * scale + dh) / self.stride)
 
         return image_paded, crop_points
 
-        # max_len = max(w, h)
-        # ratio_w = self.heatmap_size[1] / max_len
-        # ratio_h = self.heatmap_size[0] / max_len
-        # # padding
-        # if self.ratio > h /w:
-        #     pad = int(w * self.ratio - h)
-        #     pad_t = pad //2
-        #     pad_d = pad - pad_t
-        #     pad_image = np.pad(crop_image,((pad_t, pad_d), (0 ,0), (0,0)))
-        #     for i in range(len(points)):
-        #         if points[i][0] != -1 and points[i][1] != -1:
-        #             crop_points[i][0] = round((points[i][0] - crop_bbx[0]) * ratio_w)
-        #             crop_points[i][1] = round((points[i][1] - crop_bbx[1] + pad_t) * ratio_h)
-        # else:
-        #     pad = int(h / self.ratio - w)
-        #     pad_l = pad // 2
-        #     pad_r = pad - pad_l
-        #     pad_image = np.pad(crop_image, ((0, 0), (pad_l, pad_r), (0, 0)))
-        #     for i in range(len(points)):
-        #         if points[i][0] != -1 and points[i][1] != -1:
-        #             crop_points[i][0] = round((points[i][0] - crop_bbx[0] + pad_l) * ratio_w)
-        #             crop_points[i][1] = round((points[i][1] - crop_bbx[1]) * ratio_h)
-        #
-        # return pad_image, crop_points
-
     def _augment(self, image, hm):
         # flip
-        if np.random.choice((0,1)):
-            image = image[:, ::-1, :]
-            hm = hm[:, ::-1, :]
+        # if np.random.choice((0, 1)):
+        #     image = image[:, ::-1, :]
+        #     hm = hm[:, ::-1, :]
+        # rotate
+        if np.random.choice((0, 1)):
+            rotate_angle = np.random.uniform(-90, 90)
+            image_rotate_matrix = cv2.getRotationMatrix2D(
+                (self.image_size[1] // 2, self.image_size[0] // 2), rotate_angle, 1)
+            hm_rotate_matrix = cv2.getRotationMatrix2D(
+                (self.heatmap_size[1] // 2, self.heatmap_size[0] // 2), rotate_angle, 1)
+            image = cv2.warpAffine(
+                image,
+                image_rotate_matrix,
+                self.image_size,
+                borderValue=(
+                    127.5,
+                    127.5,
+                    127.5))
+            hm = cv2.warpAffine(hm, hm_rotate_matrix, self.heatmap_size)
+            for c in range(hm.shape[2]):
+                pos = np.unravel_index(np.argmax(hm[..., c]), hm[..., c].shape)
+                if hm[pos[0], pos[1], c] != 0:
+                    hm[pos[0], pos[1], c] = 1.0
+        if np.random.choice((1, 1)):
+            image = image.astype(np.float32)
+            image = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
+            random_bright = .25 + np.random.uniform(0.5, 1)
+            # print(random_bright)
+            image[:, :, 2] = image[:, :, 2] * random_bright
+            image = cv2.cvtColor(image, cv2.COLOR_HSV2RGB)
         return image, hm
 
     def _one_image_and_heatmap(self, image_set):
@@ -197,7 +209,7 @@ class Dataset():
         # img = cv2.resize(img, self.image_size)
         # img, point = image_augment_with_keypoints(img, point)
         hm = self.generate_hm(point, self.heatmap_size)
-        # img, hm =self._augment(img,hm)
+        img, hm = self._augment(img, hm)
         return img, hm
 
     def iterator(self, max_worker=None, is_oneshot=False):
@@ -256,16 +268,16 @@ if __name__ == '__main__':
 
     from core.infer.visual_utils import visiual_image_with_hm
 
-    dataset_dir = '/data/dataset/coco'
-    image_dir = '/data/dataset/coco/images/val2017'
-    gt_path = '../../data/dataset/coco/coco_val.txt'
+    dataset_dir = '/data/dataset/meter'
+    image_dir = '/data/dataset/meter'
+    gt_path = '../../data/dataset/multi_pointer/train_list.txt'
     render_path = '../../render_img'
 
-    ite = 2
-    batch_size = 32
+    ite = 3
+    batch_size = 16
 
     coco = Dataset(image_dir, gt_path, batch_size)
-    it = coco.iterator(4)
+    it = coco.iterator(0, False)
 
     t0 = time.time()
     for i in range(ite):
