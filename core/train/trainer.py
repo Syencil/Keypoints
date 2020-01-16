@@ -73,6 +73,7 @@ class Trainer():
 
         # DATASET
         self.dataset_class = dataset_class
+        self.augment = cfg.augment
         self.train_dataset = None
         self.val_dataset = None
         self.train_iterator = None
@@ -152,7 +153,8 @@ class Trainer():
                                                 gt_path=self.train_list_path,
                                                 batch_size=self.batch_size,
                                                 image_size=self.image_size,
-                                                heatmap_size=self.heatmap_size)
+                                                heatmap_size=self.heatmap_size,
+                                                augment=self.augment)
         self.train_iterator = self.train_dataset.iterator(
             self.MULTI_THREAD_NUM)
 

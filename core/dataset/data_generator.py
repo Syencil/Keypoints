@@ -12,11 +12,12 @@ import cv2
 import numpy as np
 import os
 import copy
+from core.dataset.data_augment import image_augment_with_keypoint
 
 
 class Dataset():
     def __init__(self, image_dir, gt_path, batch_size,
-                 image_size=(512, 512), heatmap_size=(128, 128)):
+                 augment=None, image_size=(512, 512), heatmap_size=(128, 128)):
         """
         Wrapper for key-points detection dataset
         :param image_dir: (str) image dir
@@ -32,6 +33,7 @@ class Dataset():
         self.image_size = image_size
         self.heatmap_size = heatmap_size
         self.batch_size = batch_size
+        self.augment = augment
 
         self.data_set = self.creat_set_from_txt()
         # self.transform_image_set_abs_to_rel()
@@ -45,8 +47,9 @@ class Dataset():
 
     def creat_set_from_txt(self):
         """
+        support multi point
         read image info and gt into memory
-        :return: [[(str) image_name, [(int) xmin, (int) ymin, (int) xmax, (int) ymax], [(int) px, (int) py]]]
+        :return: [[(str) image_name, [(int) xmin, (int) ymin, (int) xmax, (int) ymax], [[(int) px, (int) py]]]]
         """
         image_set = []
         t0 = time.time()
@@ -113,7 +116,7 @@ class Dataset():
                         np.sqrt(
                             heatmap_h_w[0]) * heatmap_h_w[1] * 10 / 4096) + 2
                     gen_hm = self.make_guassian(heatmap_h_w[0], heatmap_h_w[1], sigma=s,
-                                                center=[joint[0], joint[1]])
+                                                center=[joint[0] // self.stride, joint[1] // self.stride])
                     hm[:, :, i] = np.maximum(hm[:, :, i], gen_hm)
         return hm
 
@@ -148,52 +151,16 @@ class Dataset():
         nw, nh = int(scale * w), int(scale * h)
         image_resized = cv2.resize(crop_image, (nw, nh))
 
-        image_paded = np.full(shape=[ih, iw, 3], fill_value=127.5)
+        image_paded = np.full(shape=[ih, iw, 3], fill_value=128, dtype=np.uint8)
         dw, dh = (iw - nw) // 2, (ih - nh) // 2
         image_paded[dh:nh + dh, dw:nw + dw, :] = image_resized
         for i in range(len(points)):
             for j, point in enumerate(points[i]):
                 if point[0] != -1 and point[1] != -1:
-                    crop_points[i][j][0] = int(
-                        ((point[0] - crop_bbx[0]) * scale + dw) / self.stride)
-                    crop_points[i][j][1] = int(
-                        ((point[1] - crop_bbx[1]) * scale + dh) / self.stride)
+                    crop_points[i][j][0] = (point[0] - crop_bbx[0]) * scale + dw
+                    crop_points[i][j][1] = (point[1] - crop_bbx[1]) * scale + dh
 
         return image_paded, crop_points
-
-    def _augment(self, image, hm):
-        # flip
-        # if np.random.choice((0, 1)):
-        #     image = image[:, ::-1, :]
-        #     hm = hm[:, ::-1, :]
-        # rotate
-        if np.random.choice((0, 1)):
-            rotate_angle = np.random.uniform(-90, 90)
-            image_rotate_matrix = cv2.getRotationMatrix2D(
-                (self.image_size[1] // 2, self.image_size[0] // 2), rotate_angle, 1)
-            hm_rotate_matrix = cv2.getRotationMatrix2D(
-                (self.heatmap_size[1] // 2, self.heatmap_size[0] // 2), rotate_angle, 1)
-            image = cv2.warpAffine(
-                image,
-                image_rotate_matrix,
-                self.image_size,
-                borderValue=(
-                    127.5,
-                    127.5,
-                    127.5))
-            hm = cv2.warpAffine(hm, hm_rotate_matrix, self.heatmap_size)
-            for c in range(hm.shape[2]):
-                pos = np.unravel_index(np.argmax(hm[..., c]), hm[..., c].shape)
-                if hm[pos[0], pos[1], c] != 0:
-                    hm[pos[0], pos[1], c] = 1.0
-        if np.random.choice((1, 1)):
-            image = image.astype(np.float32)
-            image = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
-            random_bright = .25 + np.random.uniform(0.5, 1)
-            # print(random_bright)
-            image[:, :, 2] = image[:, :, 2] * random_bright
-            image = cv2.cvtColor(image, cv2.COLOR_HSV2RGB)
-        return image, hm
 
     def _one_image_and_heatmap(self, image_set):
         """
@@ -206,10 +173,9 @@ class Dataset():
         img = cv2.imread(image_path)
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         img, point = self._crop_image_with_pad_and_resize(img, bbx, point)
-        # img = cv2.resize(img, self.image_size)
-        # img, point = image_augment_with_keypoints(img, point)
+        if self.augment is not None:
+            img, point = image_augment_with_keypoint(img, point)
         hm = self.generate_hm(point, self.heatmap_size)
-        img, hm = self._augment(img, hm)
         return img, hm
 
     def iterator(self, max_worker=None, is_oneshot=False):
@@ -267,17 +233,16 @@ class Dataset():
 if __name__ == '__main__':
 
     from core.infer.visual_utils import visiual_image_with_hm
-
-    dataset_dir = '/data/dataset/meter'
-    image_dir = '/data/dataset/meter'
-    gt_path = '../../data/dataset/multi_pointer/train_list.txt'
+    import config.config_hourglass_coco as cfg
+    image_dir = cfg.val_image_dir
+    gt_path = "../../"+cfg.val_list_path
     render_path = '../../render_img'
 
     ite = 3
     batch_size = 16
 
-    coco = Dataset(image_dir, gt_path, batch_size)
-    it = coco.iterator(0, False)
+    coco = Dataset(image_dir, gt_path, batch_size, augment=cfg.augment)
+    it = coco.iterator(0, True)
 
     t0 = time.time()
     for i in range(ite):

@@ -25,11 +25,13 @@ ckpt_dir = 'checkpoints/mpii'
 
 
 # AUGMENT
-rotate = [0.5, 30, 30]
-flip = [0.5, 0.5]
-random_crop = True
-keep_align = 0.1
-data_cleaning = True
+augment = {
+    "color_jitter": 0.5,
+    "crop" : (0.5, 0.9),
+    "rotate": (0.5,30),
+    "ver_flip": 0,
+    "hor_flop": 0.5,
+}
 
 # NETWORK
 backbone = "hourglass"

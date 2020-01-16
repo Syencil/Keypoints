@@ -13,8 +13,9 @@ But it's enough as a pre-training model to train your own data.<br>
 ### Data Format
 You should transform your own data format into <br>
 (filename1 bxmin,bymin,bxmax,bymax px,py px,py ...) <br>
-(filename1 bxmin,bymin,bxmax,bymax px,py px,py ...) <br>
-(filename2 bxmin,bymin,bxmax,bymax px,py px,py ...) <br>
+If multi points have same label<br>
+(filename1 bxmin,bymin,bxmax,bymax px,py|px,py px,py ...) <br>
+(filename2 bxmin,bymin,bxmax,bymax px,py|px,py px,py|px,py ...) <br>
 ...<br>
 
 
