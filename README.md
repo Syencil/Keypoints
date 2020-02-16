@@ -11,7 +11,7 @@
 * python3 demon.py<br>
 
 ### Checkpoints
-https://drive.google.com/file/d/1qWAqCX9Ql0CDP--ZEshmNb5KSwkkmUhS/view?usp=sharing <br>
+https://drive.google.com/drive/folders/1pjOH1XUQOuMXlfGddQPvVEjXaXXPU7u1?usp=sharing <br>
 
 ### Data Format
 如果需要使用自己的数据集进行训练，首先需要将数据转换成如下的格式 <br>
