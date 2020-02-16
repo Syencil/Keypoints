@@ -75,7 +75,7 @@ def freeze_graph(input_checkpoint, output_graph, is_training=False):
 
     # 指定输出的节点名称,该节点名称必须是原模型中存在的节点
     print('Freeze graph')
-    output_node_names = ["HourglassNet/keypoint_1/conv/Sigmoid"]
+    output_node_names = ["Keypoints/keypoint_1/conv/Sigmoid"]
     print(output_node_names)
 
     with tf.Session() as sess:

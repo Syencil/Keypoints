@@ -38,7 +38,7 @@ loss_mode = 'focal' # focal, sigmoid, softmax, mse
 image_size = (512, 512)
 stride = 4
 heatmap_size = (128, 128)
-num_block = 1
+num_block = 2
 num_depth = 5
 residual_dim = [256, 384, 384, 384, 512]
 

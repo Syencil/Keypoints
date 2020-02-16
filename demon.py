@@ -54,22 +54,22 @@ if __name__ == '__main__':
     os.environ["CUDA_VISIBLE_DEVICES"] = "1"
     pb_path = 'Hourglass.pb'
     # pb_path = 'tensorRT/TensorRT.pb'
-    img_dir = 'data/dataset/coco/images/val2017'
+    img_dir = '/data/dataset/coco/images/val2017'
     gt_path = 'data/dataset/coco/coco_val.txt'
     batch_size = 8
     img_size = (512,512)
     hm_size = (128,128)
-    dataset = Dataset(img_dir, gt_path, batch_size, img_size, hm_size)
+    dataset = Dataset(img_dir, gt_path, batch_size, None, img_size, hm_size)
     it = dataset.iterator(4, False)
     image, hm = next(it)
     image_norm = (image / 127.5) - 1
-    input_dict = {'Placeholder/inputs_x:0': image_norm, 'Placeholder/is_training:0':False}
-    output_node_name=['HourglassNet/keypoint_1/conv/Sigmoid:0']
+    input_dict = {'Placeholder/inputs_x:0': image_norm}
+    output_node_name=['Keypoints/keypoint_1/conv/Sigmoid:0']
     outputs = read_pb(pb_path, input_dict, output_node_name)
     for k in range(len(outputs)):
         # outputs[k] = sigmoid(outputs[k])
-        points = get_results(outputs[k], 0.2)
-        gt_points = get_results(hm, 0.6)
+        points = get_results(outputs[k], 0.3)
+        gt_points = get_results(hm, 0.3)
         print(points)
         print(gt_points)
         for i in range(len(points)):
@@ -89,13 +89,17 @@ if __name__ == '__main__':
             tile_output = np.tile(one_ouput, (1, 1, 3))
             tile_img =cv2.resize(tile_output, img_size) + img
 
-            cv2.imwrite('render_img/'+str(i)+'_'+str(k)+'_visible.jpg', tile_img)
+            cv2.imwrite('render_img/'+str(i)+'_'+str(k)+'_origin.jpg', img)
+
+
+            cv2.imwrite('render_img/'+str(i)+'_'+str(k)+'_hm.jpg', tile_img)
 
             sk_img = draw_skeleton(img, points[i],'coco')
             cv2.imwrite('render_img/' + str(i) + '_' + str(k) + '_skeleton.jpg', sk_img)
 
             img = draw_skeleton(img, gt_points[i],'coco')
-            cv2.imwrite('render_img/'+str(i)+'_'+str(k)+'_origin.jpg', img)
+            cv2.imwrite('render_img/'+str(i)+'_'+str(k)+'_visible.jpg', img)
+
         # outputs[k]
 
 

@@ -1,5 +1,10 @@
-# Keypoint Detection In Tensorflow and TensorRT
+# Keypoint Detection In Tensorflow and TensorRT C++
 ## 1.Modified hourglass (Hourglass-104) and ResNet-101<br>
+
+### Introduction
+此项目为关键点检测训练以及推理加速代码。训练部分用python3 + tensorflow-1.14完成,推理部分用C++ + tensorRT-6完成。<br>
+训练数据集主要为COCO，模型为Hourglass。
+
 ### Quick Start
 * python3 train_hourglass_coco.py <br>
 * python3 core/infer/freeze_graph.py -CUDA 0 -c checkpoints/coco/Hourglass_coco.ckpt -o Hourglass.pb <br>
@@ -7,11 +12,9 @@
 
 ### Checkpoints
 https://drive.google.com/file/d/1qWAqCX9Ql0CDP--ZEshmNb5KSwkkmUhS/view?usp=sharing <br>
-However, each ckpt is not fully trained due to limited resources. 
-But it's enough as a pre-training model to train your own data.<br>
 
 ### Data Format
-You should transform your own data format into <br>
+如果需要使用自己的数据集进行训练，首先需要将数据转换成如下的格式 <br>
 (filename1 bxmin,bymin,bxmax,bymax px,py px,py ...) <br>
 If multi points have same label<br>
 (filename1 bxmin,bymin,bxmax,bymax px,py|px,py px,py ...) <br>
@@ -20,8 +23,7 @@ If multi points have same label<br>
 
 
 ### Inference
-在core/infer/infer_utils.py中的一些api可以用来构建一个简单的inference模型。通过Flask包装一下就可以实现简单的线上推理了。操作示例在infer_hourglass.py中，其中bbx需要通过其他模型获取。
-
+在core/infer/infer_utils.py中的一些api可以用来构建一个简单的inference模型。通过Flask包装一下就可以实现简单的线上推理了。操作示例在infer_hourglass.py中，其中bbx需要通过其他模型获取。<br>
 
 ### 注意事项
 *此处为记录一下项目中可能遇到的或者遇到过的坑*<br>
@@ -38,16 +40,22 @@ If multi points have same label<br>
 <br>
 
 ## 2.TensorRT
+## 介绍
+此处项目采用CUDA 10 + tensorRT-6完成推理阶段，可实现模型推理加速，支持FP32，FP16
 ### 开始使用
 * 1.pb转uff
-	cd tensorRT
-	python3 pb2uff.py
+	* cd tensorRT/python
+	* python3 pb2uff.py
 * 2.编译C++文件
-	框架已构建完毕，如果不使用deconv做上采样而使用tf.image.resize_nearest_neighbor则需要手动实现Plugin，这一部分正在实现中。
+	* cd tensorRT/c++
+	* cmake .
+	* make
+
 
 ## 尚未完成的部分
-* 1.数据增强 主要是图像旋转增强这一块有问题，会尽快将包括其他的增强方式加入项目
-* 2.TensorRT C++中对upsample plugin的实现，框架现已搭好，会尽快更新
-* 3.Evaluation 目前全靠loss和肉眼观察输出结果，只能定性分析。定量分析的话可以通过github上其他项目实现，会尽快将其融入该项目
-* 4.通过Hourglass-101构建今年大火的Anchor-free检测器CenterNet：Object as point
+* ~~1.数据增强 主要是图像旋转增强这一块有问题，会尽快将包括其他的增强方式加入项目~~
+* ~~2.TensorRT C++中对upsample plugin的实现，框架现已搭好，会尽快更新~~
+* ~~3.通过Hourglass-101构建今年大火的Anchor-free检测器CenterNet：Object as point~~
+* 4.tensorRT C++数据预处理和python有点不同，并不影响太多，懒得改了。
+* 5.Int 8量化矫正，有空再更新
 
